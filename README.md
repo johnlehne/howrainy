@@ -1,5 +1,6 @@
 # howrainy
-Show the estimated chance of rain and estimated amount.  Used to determine rain gear required when heading out to bike.
+Show the estimated chance of rain and estimated amount in a graph.  The graph is hosted on a DigitalOcean droplet configured with an ansible playbook.  The website is used to determine rain gear required when heading out to bike.
+
 Uses AerisWeather API.  Secret API key is in ansible vars. You'll need to setup a testing account with them and update the values to use this.
 
 #### Use DigitalOcean's doctl to spin up droplet (VM)
