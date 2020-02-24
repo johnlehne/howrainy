@@ -1,0 +1,50 @@
+#!/usr/bin/python3
+
+# John Lehne - john@lehne.com - 2020
+
+import urllib.request as request
+import matplotlib.pyplot as plt
+import json
+
+graph_output_location = "/var/www/html/weather_graph.png"
+
+access_id = "D9xydiBcq45ECbR7oVbmR"
+secret_key = "{{ areis_secret_api_key }}"
+
+url = (f"https://api.aerisapi.com/forecasts/97204?&format=json&filter=1hr&limit=10&"
+       f"fields=periods.dateTimeISO,periods.pop,periods.minTempF,periods.precipIN&"
+       f"client_id={access_id}&"
+       f"client_secret={secret_key}")
+
+with request.urlopen(url) as response:
+        if response.getcode() == 200:
+            source = response.read()
+            data = json.loads(source)
+        else:
+            print('An error occurred while attempting to retrieve data from the API.')
+
+
+def create_list(keyname,list_of_dicts):
+    val_list = []
+    for item in list_of_dicts["periods"]:
+        val_list.append(item[keyname])
+    return val_list
+
+real_data = data["response"][0]
+
+precip_percent = create_list('pop',real_data)
+precip_amount = create_list('precipIN',real_data)
+
+print(precip_percent)
+print(precip_amount)
+
+X = [0,1,2,3,4,5,6,7,8,9]
+Y = precip_amount
+plt.bar(X,Y)
+plt.ylim(0,0.75)
+plt.twinx()
+
+Y = precip_percent
+plt.ylim(0,100)
+plt.plot(X,Y,color="red")
+plt.savefig(graph_output_location)

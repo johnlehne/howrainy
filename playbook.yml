@@ -1,0 +1,101 @@
+---
+- hosts: all
+  become: true
+  vars_files:
+    - vars/default.yml
+
+  tasks:
+    - name: Install Prerequisites
+      apt: name=aptitude update_cache=yes state=latest force_apt_get=yes
+
+# Sudo Group Setup
+    - name: Make sure we have a 'wheel' group
+      group:
+        name: wheel
+        state: present
+
+    - name: Allow 'wheel' group to have passwordless sudo
+      lineinfile:
+        path: /etc/sudoers
+        state: present
+        regexp: '^%wheel'
+        line: '%wheel ALL=(ALL) NOPASSWD: ALL'
+        validate: '/usr/sbin/visudo -cf %s'
+
+# User + Key Setup
+    - name: Create a new regular user with sudo privileges
+      user:
+        name: "{{ create_user }}"
+        state: present
+        groups: wheel
+        append: true
+        create_home: true
+        shell: /bin/bash
+
+    - name: Set authorized key for remote user
+      authorized_key:
+        user: "{{ create_user }}"
+        state: present
+        key: "{{ copy_local_key }}"
+
+    - name: Disable password authentication for root
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        state: present
+        regexp: '^#?PermitRootLogin'
+        line: 'PermitRootLogin prohibit-password'
+
+# Upgrade All Packages        
+    - name: Upgrade all packages to the latest version
+      apt:
+        name: "*"
+        state: latest
+
+# Install Packages
+    - name: Update apt
+      apt: update_cache=yes
+
+    - name: Install required system packages
+      apt: name={{ sys_packages }} state=latest
+
+# Setup Weather 'app'
+    - name: Install pip for python3
+      command: pip3 install matplotlib
+    
+    - name: Remove lighttpd default index 
+      command: rm -rf /var/www/html/index.lighttpd.html
+      
+    - name: Create Website
+      shell: |
+        echo '<img src="weather_graph.png">' > /var/www/html/index.html
+    
+    - name: Copy weather script
+      template: 
+        src: get_weather.py.j2
+        dest: /etc/cron.hourly/get_weather.py
+        mode: '0744'
+    
+    - name: Run weather program
+      shell: |
+        /usr/bin/python3 /etc/cron.hourly/get_weather.py
+
+# UFW Setup
+    - name: UFW - Allow SSH connections
+      ufw:
+        rule: allow
+        name: OpenSSH
+
+    - name: UFW - Allow http connections
+      ufw:
+        rule: allow
+        name: Lighttpd HTTP
+
+    - name: UFW - Deny all other incoming traffic by default
+      ufw:
+        state: enabled
+        policy: deny
+        direction: incoming
+
+    - name: Reboot machine after updates were installed
+      reboot:
+        reboot_timeout: 600
