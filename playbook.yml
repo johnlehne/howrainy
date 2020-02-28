@@ -77,7 +77,7 @@
     
     - name: Run weather program
       shell: |
-        /usr/bin/python3 /etc/cron.hourly/get_weather.py
+        /usr/bin/python3 /etc/cron.hourly/get_weather_py
 
 # UFW Setup
     - name: UFW - Allow SSH connections
